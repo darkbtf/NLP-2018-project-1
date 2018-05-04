@@ -3,7 +3,8 @@ import nltk
 from nltk.tokenize import TweetTokenizer
 from nltk.stem.lancaster import LancasterStemmer
 from nltk.corpus import stopwords
-from sklearn.svm import SVR
+from sklearn.svm import SVC
+from sklearn.metrics import f1_score
 import numpy as np
 import re
 
@@ -99,20 +100,28 @@ def evaluate(docs):
         X.append(x)
     return np.array(X)
 
+def to_class(value):
+    if abs(value) < 1e-5: return 0
+    elif value > 0: return 1
+    else: return 2
 X = evaluate(train_data)
-Y = np.array(map(lambda doc: float(doc['sentiment']), train_data))
+Y = np.array(map(lambda doc: to_class(float(doc['sentiment'])), train_data))
 
-clf = SVR()
+clf = SVC()
 clf.fit(X, Y)
 predicted_y = clf.predict(X)
-diff = predicted_y - Y
-train_mse = np.sum(diff*diff)/diff.shape[0]
+train_macro_f1 = f1_score(Y, predicted_y, average='macro')
+train_micro_f1 = f1_score(Y, predicted_y, average='micro')
+print('training')
+print('macro-f1 = ' + str(train_macro_f1))
+print('micro-f1 = ' + str(train_micro_f1))
 
 test_x = evaluate(test_data)
-test_y = np.array(map(lambda doc: float(doc['sentiment']), test_data))
+test_y = np.array(map(lambda doc: to_class(float(doc['sentiment'])), test_data))
 test_result = clf.predict(test_x)
-test_diff = test_result - test_y
-test_mse = np.sum(test_diff*test_diff)/test_diff.shape[0]
 
-print('train_mse = ' + str(train_mse))
-print('test_mse = ' + str(test_mse))
+test_macro_f1 = f1_score(test_y, test_result, average='macro')
+test_micro_f1 = f1_score(test_y, test_result, average='micro')
+print('testing')
+print('macro-f1 = ' + str(test_macro_f1))
+print('micro-f1 = ' + str(test_micro_f1))
